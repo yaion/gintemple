@@ -8,12 +8,24 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterRoutes(r *gin.Engine, userHandler *handler.UserHandler, mw *middleware.Middleware, wsHub *websocket.Hub) {
+func RegisterRoutes(r *gin.Engine, userHandler *handler.UserHandler, fileHandler *handler.FileHandler, mw *middleware.Middleware, wsHub *websocket.Hub) {
 	// Global middleware
 	r.Use(mw.Cors())
 
 	// WebSocket Route
 	r.GET("/ws", wsHub.HandleWebSocket)
+
+	// File Upload Routes (Example)
+	upload := r.Group("/upload")
+	{
+		upload.POST("/simple", fileHandler.UploadSimple)
+		upload.POST("/init", fileHandler.InitiateMultipart)
+		upload.POST("/part", fileHandler.UploadPart)
+		upload.POST("/complete", fileHandler.CompleteMultipart)
+
+		// Static file serving for local storage (DEV ONLY)
+		r.Static("/uploads", "./uploads")
+	}
 
 	// Root API Group
 	api := r.Group("/api")

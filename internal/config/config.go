@@ -10,6 +10,9 @@ type Config struct {
 	Redis         RedisConfig         `mapstructure:"redis"`
 	RabbitMQ      RabbitMQConfig      `mapstructure:"rabbitmq"`
 	Elasticsearch ElasticsearchConfig `mapstructure:"elasticsearch"`
+	Meilisearch   MeilisearchConfig   `mapstructure:"meilisearch"`
+	Asynq         AsynqConfig         `mapstructure:"asynq"`
+	Storage       StorageConfig       `mapstructure:"storage"`
 	Logger        LoggerConfig        `mapstructure:"logger"`
 }
 
@@ -37,6 +40,28 @@ type ElasticsearchConfig struct {
 	Addresses []string `mapstructure:"addresses"`
 	Username  string   `mapstructure:"username"`
 	Password  string   `mapstructure:"password"`
+}
+
+type MeilisearchConfig struct {
+	Host   string `mapstructure:"host"`
+	APIKey string `mapstructure:"api_key"`
+}
+
+type AsynqConfig struct {
+	Addr        string `mapstructure:"addr"`
+	Password    string `mapstructure:"password"`
+	DB          int    `mapstructure:"db"`
+	Concurrency int    `mapstructure:"concurrency"`
+}
+
+type StorageConfig struct {
+	Type  string      `mapstructure:"type"`
+	Local LocalConfig `mapstructure:"local"`
+}
+
+type LocalConfig struct {
+	Path string `mapstructure:"path"`
+	URL  string `mapstructure:"url"`
 }
 
 type LoggerConfig struct {

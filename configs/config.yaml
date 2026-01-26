@@ -20,5 +20,21 @@ elasticsearch:
   username: ""
   password: ""
 
+meilisearch:
+  host: "http://localhost:7700"
+  api_key: "masterKey"
+
+asynq:
+  addr: "127.0.0.1:6379"
+  password: ""
+  db: 1
+  concurrency: 10
+
+storage:
+  type: "local" # local, s3, oss
+  local:
+    path: "./uploads"
+    url: "http://localhost:8080/uploads"
+
 logger:
   level: "debug"

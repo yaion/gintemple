@@ -7,9 +7,8 @@ import (
 	"shop/internal/cron"
 	"shop/internal/database"
 	"shop/internal/handler"
-	"shop/internal/infra/elasticsearch"
-	"shop/internal/infra/rabbitmq"
-	"shop/internal/infra/redis"
+	"shop/internal/infra/asynq"
+	"shop/internal/infra/storage/local"
 	"shop/internal/middleware"
 	"shop/internal/repository"
 	"shop/internal/router"
@@ -18,6 +17,8 @@ import (
 	"shop/internal/websocket"
 	"shop/pkg/idgen"
 	"shop/pkg/logger"
+	"shop/pkg/queue"
+	"shop/pkg/search"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/fx"
@@ -30,25 +31,62 @@ func NewApp() *fx.App {
 			config.NewConfig,
 			logger.NewLogger,
 			database.NewDatabase,
-			redis.NewRedis,
-			rabbitmq.NewRabbitMQ,
-			elasticsearch.NewElasticsearch,
+			asynq.NewAsynqServer,
+
+			// Interfaces
+			ProvideSearchEngine,
+			ProvideQueue,
+
+			// Storage provider based on config (currently simplified to always provide local)
+			// In a real app, use a factory function to choose provider based on config
+			local.NewLocalStorage,
 			idgen.NewIDGenerator,
 			server.NewServer,
 			middleware.NewMiddleware,
 			repository.NewUserRepository,
 			service.NewUserService,
+			service.NewFileService,
 			handler.NewUserHandler,
+			handler.NewFileHandler,
 			cron.NewCronManager,
 			websocket.NewHub,
 		),
 		fx.Invoke(
 			router.RegisterRoutes,
 			cron.StartCron,
+			asynq.StartAsynqServer,
 			StartWebSocket,
 			StartServer,
 		),
 	)
+}
+
+func ProvideSearchEngine(cfg *config.Config, logger *zap.Logger) (search.Engine, error) {
+	// Simple switch based on config presence or a specific flag
+	// For example, if Meilisearch host is set, use it, else if ES addresses set, use ES
+	if cfg.Meilisearch.Host != "" {
+		logger.Info("Using Meilisearch as search engine")
+		return search.NewMeiliAdapter(cfg, logger)
+	}
+	if len(cfg.Elasticsearch.Addresses) > 0 {
+		logger.Info("Using Elasticsearch as search engine")
+		return search.NewESAdapter(cfg, logger)
+	}
+	// Default or Error
+	return nil, nil // Or return a NoOp engine
+}
+
+func ProvideQueue(cfg *config.Config, logger *zap.Logger) (queue.Queue, error) {
+	// Similar logic for Queue
+	if cfg.RabbitMQ.URL != "" {
+		logger.Info("Using RabbitMQ as message queue")
+		return queue.NewRabbitMQAdapter(cfg, logger)
+	}
+	if cfg.Asynq.Addr != "" {
+		logger.Info("Using Asynq as message queue")
+		return queue.NewAsynqAdapter(cfg, logger)
+	}
+	return nil, nil
 }
 
 func StartWebSocket(lc fx.Lifecycle, hub *websocket.Hub) {
